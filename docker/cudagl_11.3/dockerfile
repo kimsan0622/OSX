@@ -1,0 +1,36 @@
+
+# docker build -t airc/1.13.0-cuda11.6-cudnn8-osx:cudagl -f docker/cudagl_11.3/dockerfile .
+
+# docker run --gpus all --rm -it -v ./:/root/osx --name osx airc/1.13.0-cuda11.6-cudnn8-osx:cudagl
+# docker run --gpus all --rm -it -v ./:/root/osx -v /home/san/workspace/mmc1_pretrained_model_project/youtube_preproc_web/data:/data --name osx airc/1.13.0-cuda11.6-cudnn8-osx:cudagl
+# docker run --gpus all --rm -it --name osx airc/1.13.0-cuda11.6-cudnn8-osx:cudagl
+
+FROM nvidia/cudagl:11.3.0-devel-ubuntu20.04
+LABEL maintainer "KETI AIRC sankim <kimsan0622@keti.re.kr>"
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update --fix-missing && apt-get install -y wget bzip2 ca-certificates \
+    libglib2.0-0 libxext6 libsm6 libxrender1 \
+    git mercurial subversion locales rsync \
+    libc6 libstdc++6 tar curl net-tools apt-utils
+RUN locale-gen en_US.UTF-8 && update-locale
+ENV LC_ALL=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+
+WORKDIR /root
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3.sh && \
+    /bin/bash ~/miniconda3.sh -b -p /opt/conda && \
+    rm ~/miniconda3.sh
+ENV PATH=/opt/conda/bin:$PATH
+# RUN echo "export PATH=/opt/conda/bin:$PATH" >> /etc/bash.bashrc
+
+RUN pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
+
+ADD ./requirements.txt /root/requirements.txt
+ADD ./install.sh /root/install.sh
+ADD ./main/transformer_utils /root/main/transformer_utils
+RUN bash install.sh
+
+RUN pip install "gitpython>=3.1.30"
+RUN pip install ultralytics

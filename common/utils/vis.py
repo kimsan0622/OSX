@@ -154,6 +154,7 @@ def render_mesh(img, mesh, face, cam_param):
 
     # render
     rgb, depth = renderer.render(scene, flags=pyrender.RenderFlags.RGBA)
+    renderer.delete()
     rgb = rgb[:,:,:3].astype(np.float32)
     valid_mask = (depth > 0)[:,:,None]
 
