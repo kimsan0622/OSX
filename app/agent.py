@@ -57,9 +57,10 @@ class OSXProcAgent():
         self.pose_dir = os.environ.get("POSE_DIR", "/data/pose")
         self.frame_dir = os.environ.get("FRAME_DIR", "/data/frame")
         self.framerate = int(os.environ.get("FRAME_RATE", "30"))
+        self.skip_drawing = bool(os.environ.get("SKIP_DRAWING", "false")=="true")
         self.OSX_PROC_SEEK_DURATION = int(os.environ.get(
             'OSX_PROC_SEEK_DURATION', 
-            5
+            2
         ))
         
         self.osx_extractor = OSXPoseExtractor()
@@ -163,34 +164,35 @@ class OSXProcAgent():
                 ],
                 batch_size=8
             )
-        draw_func = functools.partial(OSXPoseExtractor.draw_single_sample, root_dir=frame_output_dir_proc)
-        with Pool(processes=8) as pool:
-            for i in tqdm(pool.imap_unordered(draw_func, per_image_data), desc="proc..."):
-                pass
+        
+        if not self.skip_drawing:
+            draw_func = functools.partial(OSXPoseExtractor.draw_single_sample, root_dir=frame_output_dir_proc)
+            with Pool(processes=8) as pool:
+                for i in tqdm(pool.imap_unordered(draw_func, per_image_data), desc="proc..."):
+                    pass
 
+            # create video for preview
+            tmp_pose_video_path = os.path.join(frame_output_dir_proc, f"{clip_id}.mp4")
+            cvt_images2video(frame_output_dir_proc, tmp_pose_video_path, self.framerate)
+            muxing_video_and_audio(
+                tmp_pose_video_path, 
+                clip_audio_path, pose_video_path)
+            
+            tmp_merged_pose_video_path = os.path.join(frame_output_dir_proc, f"{clip_id}-merged.mp4")
+            merge_video(
+                clip_video_path,
+                tmp_pose_video_path,
+                tmp_merged_pose_video_path,
+                )
+            muxing_video_and_audio(
+                tmp_merged_pose_video_path, 
+                clip_audio_path, merged_pose_video_path)
         
         clip_pose = [res_list for _, _, res_list, _ in per_image_data]
         for idx in range(len(clip_pose)):
             for per_idx in range(len(clip_pose[idx])):
                 del clip_pose[idx][per_idx]["smplx_mesh_cam"]
         json.dump(clip_pose, open(pose_path, "w"))
-        
-        # create video for preview
-        tmp_pose_video_path = os.path.join(frame_output_dir_proc, f"{clip_id}.mp4")
-        cvt_images2video(frame_output_dir_proc, tmp_pose_video_path, self.framerate)
-        muxing_video_and_audio(
-            tmp_pose_video_path, 
-            clip_audio_path, pose_video_path)
-        
-        tmp_merged_pose_video_path = os.path.join(frame_output_dir_proc, f"{clip_id}-merged.mp4")
-        merge_video(
-            clip_video_path,
-            tmp_pose_video_path,
-            tmp_merged_pose_video_path,
-            )
-        muxing_video_and_audio(
-            tmp_merged_pose_video_path, 
-            clip_audio_path, merged_pose_video_path)
         
         # delete frames
         shutil.rmtree(frame_output_base_dir)
