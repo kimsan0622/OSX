@@ -8,6 +8,8 @@
 # docker -H 10.0.8.100:2375 pull ketiair.com:10004/osx-agent:0.1
 # docker -H 10.0.8.100:2375 run --gpus '"device=0"' --rm -it -d -v /mnt/nfs4/youtube_downloader/data:/data -e MONGODB_URI="mongodb://root:1234@10.0.8.183:27018" --name osx-agent-0-0 ketiair.com:10004/osx-agent:0.1
 
+# docker -H 10.0.8.100:2375 run --gpus '"device=0"' --rm -it -d -v /mnt/nfs4/youtube_downloader/data:/data -e DRAWING_RATE="0.01" -e MONGODB_URI="mongodb://root:1234@10.0.8.183:27018" --name osx-agent-0-0 ketiair.com:10004/osx-agent:0.1
+
 FROM airc/1.13.0-cuda11.6-cudnn8-osx:cudagl
 LABEL maintainer "KETI AIRC sankim <kimsan0622@keti.re.kr>"
 

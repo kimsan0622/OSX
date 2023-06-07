@@ -2,6 +2,7 @@ import os
 import glob
 import logging
 import json
+import random
 import time
 import shutil
 import subprocess
@@ -57,10 +58,10 @@ class OSXProcAgent():
         self.pose_dir = os.environ.get("POSE_DIR", "/data/pose")
         self.frame_dir = os.environ.get("FRAME_DIR", "/data/frame")
         self.framerate = int(os.environ.get("FRAME_RATE", "30"))
-        self.skip_drawing = bool(os.environ.get("SKIP_DRAWING", "false")=="true")
+        self.drawing_rate = float(os.environ.get("DRAWING_RATE", 1))
         self.OSX_PROC_SEEK_DURATION = int(os.environ.get(
             'OSX_PROC_SEEK_DURATION', 
-            2
+            1
         ))
         
         self.osx_extractor = OSXPoseExtractor()
@@ -165,7 +166,7 @@ class OSXProcAgent():
                 batch_size=8
             )
         
-        if not self.skip_drawing:
+        if random.uniform(0, 1) <= self.drawing_rate:
             draw_func = functools.partial(OSXPoseExtractor.draw_single_sample, root_dir=frame_output_dir_proc)
             with Pool(processes=8) as pool:
                 for i in tqdm(pool.imap_unordered(draw_func, per_image_data), desc="proc..."):
@@ -187,6 +188,9 @@ class OSXProcAgent():
             muxing_video_and_audio(
                 tmp_merged_pose_video_path, 
                 clip_audio_path, merged_pose_video_path)
+        else:
+            pose_video_path = None
+            merged_pose_video_path = None
         
         clip_pose = [res_list for _, _, res_list, _ in per_image_data]
         for idx in range(len(clip_pose)):
